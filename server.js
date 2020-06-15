@@ -3,6 +3,7 @@
 const express = require('express'); // using express 
 const socketIO = require('socket.io');
 const http = require('http');
+var fs = require('fs');
 const port = 5231; // setting the port  
 let app = express();
 let server = http.createServer(app);
@@ -13,6 +14,9 @@ var DICE = {
     MIN: 1,
     MAX: 6,
 }
+
+var html = fs.readFileSync('index.html', 'utf8');
+var js = fs.readFileSync('test.js', 'utf8');
 
 class Game {
     constructor() {
@@ -177,7 +181,7 @@ var game = new Game();
 console.log("Connect by using http://localhost:5231/");
 
 // make a connection with the user from server side
-io.on('connection', (socket) => {
+io.of("/game").on('connection', (socket) => {
     if (!game.started) {
         var player = new Player(socket);
 
@@ -329,3 +333,7 @@ io.on('connection', (socket) => {
         socket.disconnect();
     }
 });
+
+app.get('/', (req, res) => res.send(html));
+
+app.get('/test.js', (req, res) => res.send(js));

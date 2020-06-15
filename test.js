@@ -46,7 +46,7 @@ function connect() {
     if (socket) {
         socket.disconnect();
     }
-    socket = io("http://75.52.93.72:5231");
+    socket = io("http://localhost:5231");
 
     sleepTimeouts = setInterval(() => {
         socket.emit("timeout", "yeetus deletus");
