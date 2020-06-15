@@ -1,0 +1,148 @@
+<html>
+
+<head>
+
+    <!-- CSS only -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <!-- JS, Popper.js, and jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body onload="onload();">
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
+    <script src="test.js"></script>
+
+    <div class="fluid-container">
+
+        <div id="main-content">
+
+            <div id="start" class="row">
+                <div class="col-4"></div>
+                <div class="col-4">
+                    <h1 class="text-center">Chinese Game Thing</h1>
+                    <p class="text-center lead">A game I made for my parents</p>
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Display Name" id="name">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" id="connect" onclick="connect();">Connect!</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="waitroom">
+                <h2 class="text-center">Hold on, game is starting soon.</h2>
+                <p class="text-center lead" id="waitroom-info">Waiting for all players to ready up!</p>
+                <div class="row">
+                    <div class="col-5"></div>
+                    <button class="btn btn-primary col-2" id="ready" onclick="ready();">Ready Up!</button>
+                </div>
+                <div class="row">
+                    <div class="col-4"></div>
+                    <table class="col-4 table table-hover player-list-status" style="margin:10px;"></table>
+                </div>
+                <div class="row">
+                    <div class="col-5"></div>
+                    <button class="btn btn-danger col-2" id="ready" onclick="if(socket){socket.disconnect();}">Leave Room</button>
+                </div>
+            </div>
+
+            <div id="roll">
+                <div class="row">
+                    <div class="col-8">
+                        <h2 class="player-name"></h2>
+                        <hr>
+                        <div class="row dice-roll-disp" style="padding:10px"></div>
+                        <div class="row">
+                            <div class="col-3"></div>
+                            <button class="btn btn-primary col-2" id="roll-button" onclick="roll();">Roll!</button>
+                        </div>
+                        <p class="text-center lead" id="rollroom-info">Waiting for all players to roll up!</p>
+                    </div>
+                    <table class="col-4 table table-hover player-list-rolled"></table>
+                </div>
+            </div>
+
+            <div id="bluff">
+                <div class="row">
+                    <div class="col-8">
+                        <h2 class="player-name"></h2>
+                        <hr>
+                        <div class="row dice-roll-disp" style="padding:10px"></div>
+                        <div class="col-10 alert-info alert" id="last-raise-info"></div>
+                        <div class="row">
+                            <div class="col-3"></div>
+                            <button class="btn btn-primary col-2" id="raise-button" data-toggle="modal" onclick="if(!$('#raise-button').hasClass('disabled')){$('#raiseModal').modal('show');}">Raise!</button>
+                            <div class="col-1"></div>
+                            <button class="btn btn-primary col-2" id="bluff-button" onclick="bluff();">Call Bluff!</button>
+                        </div>
+                    </div>
+                    <table class="col-4 table table-hover player-list"></table>
+                </div>
+            </div>
+
+            <div id="round-end">
+                <div class="row">
+                    <div class="col-8">
+                        <h2 class="player-name"></h2>
+                        <hr>
+                        <div style="height:10%"></div>
+                        <h3>Heres what everyone rolled!</h3>
+                        <div style="height:10%"></div>
+                        <table id="all-roll-disp" class="table table-bordered">
+
+                        </table>
+                        <h3 class="alert alert-info" id="last-call"></h3>
+                        <h3 id="win-lose"></h3>
+                        <button class="btn btn-primary" onclick="reset();enterWaitroom();">Return to waitroom</button>
+                    </div>
+                    <table class="col-4 table table-hover player-list"></table>
+                </div>
+            </div>
+
+            <!-- Raise Modal -->
+            <div class="modal fade" id="raiseModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">Raise Amount</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="basic-addon1">Number of numbers: </span>
+                                </div>
+                                <input type="number" class="form-control" placeholder="number of numbers" aria-label="Username" aria-describedby="basic-addon1" id="number-of-numbers" min="1" oninput="this.value = Math.max(this.min,Math.min(this.max, parseInt(this.value)))">
+                            </div>
+                            <div class="form-group">
+                                <label for="dice-number">Number</label>
+                                <select class="form-control" id="dice-number">
+                            </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Nevermind</button>
+                            <button type="button" class="btn btn-primary" onclick="raise();" data-dismiss="modal">Raise!</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
