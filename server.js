@@ -108,8 +108,20 @@ class Game {
             num: num,
             numOfNums: numOfNums,
         });
+
+        this.takeTurn();
+    }
+
+    takeTurn() {
         this.playerTurn++;
         this.playerTurn %= this.players.length;
+        this.checkDisconnect();
+    }
+
+    checkDisconnect() {
+        if (this.players[this.playerTurn].disconnect) {
+            this.takeTurn();
+        }
     }
 
     reset() {
@@ -118,14 +130,30 @@ class Game {
             player.rolled = false;
             player.rolledValues = [];
         });
+        this.playerTurn = 0;
         this.started = false;
     }
+
+    reorderPlayers(numAtTop) {
+        swap(this.players, numAtTop, 0);
+        for (var i = Math.random() * 10 + 1; i >= 0; i--) {
+            swap(this.players, Math.floor(Math.random() * (this.players.length - 1) + 1), Math.floor(Math.random() * (this.players.length - 1) + 1));
+        }
+    }
+}
+
+function swap(arr, a, b) {
+    var temp = arr[a];
+    arr[a] = arr[b];
+    arr[a] = temp;
 }
 
 class Player {
     constructor(socket) {
         this.socket = socket;
         this.rolled = false;
+
+        this.disconnect = false;
 
         this.rolledValues = [];
 
@@ -159,6 +187,7 @@ class Player {
             name: this.name,
             ready: this.ready,
             score: this.score,
+            disconnect: this.disconnect,
         };
     }
 
@@ -169,6 +198,7 @@ class Player {
             name: this.name,
             ready: this.ready,
             score: this.score,
+            disconnect: this.disconnect,
         };
     }
 }
@@ -222,6 +252,10 @@ io.of("/game").on('connection', (socket) => {
                 }
 
                 if (gameStart) {
+
+                    console.log("--------------------- GAME STARTING --------------------------");
+                    console.log("Players : ", game.getJsonHappyPlayerList());
+
                     game.start();
                     game.sendAllEvent("start");
                     game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
@@ -241,6 +275,8 @@ io.of("/game").on('connection', (socket) => {
 
                         var a = game.players.some((player) => player.rolled == false);
                         if (!a) {
+                            console.log("+++++++++++++++++++ ALL PLAYERS HAVE ROLLED +++++++++++++++++++++");
+                            console.log(game.getJsonHappyPlayerList());
                             game.sendAllEventMessage("bluff-game-state", JSON.stringify(game.toJsonHappy()));
                             game.sendAllEvent("enter-bluff");
                         }
@@ -258,6 +294,7 @@ io.of("/game").on('connection', (socket) => {
 
             socket.on("call", (num, numOfNums) => {
                 if (socket.id == game.players[game.playerTurn].socket.id) {
+                    console.log(game.playerTurn, " raised it to ", num, " ", numOfNums, "'s");
                     game.call(num, numOfNums);
                     game.sendAllEventMessage("bluff-game-state", JSON.stringify(game.toJsonHappy()));
                 } else {
@@ -307,24 +344,32 @@ io.of("/game").on('connection', (socket) => {
 
                 var gameState = game.toJsonHappyPrivate();
 
-                gameState.didWin = count > lastCall.numOfNums;
+                gameState.didWin = count < lastCall.numOfNums;
                 gameState.playerInvolved = game.playerTurn;
 
                 game.sendAllEventMessage("end-game-state", gameState);
+                console.log(game.toJsonHappy());
                 game.reset();
+                game.reorderPlayers(game.playerTurn);
                 game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
             });
 
             socket.on("disconnect", () => {
                 console.log(player.name + " has disconnected!");
 
-                game.removeSocket(socket.id);
                 game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
 
-                if (game.started && game.players.length <= 1) {
-                    game.sendAllEvent("heavy-error", "All opponents have left!");
-                    game.clearPlayers();
-                    game = new Game();
+                if (game.started) {
+                    if (game.players.length <= 1) {
+                        game.sendAllEvent("heavy-error", "All opponents have left!");
+                        game.clearPlayers();
+                        game = new Game();
+                    }
+                    player.disconnect = true;
+                    game.playerTurn %= game.players.length;
+                    checkDisconnect();
+                } else {
+                    game.removeSocket(socket.id);
                 }
             });
         });

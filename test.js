@@ -46,7 +46,7 @@ function connect() {
     if (socket) {
         socket.disconnect();
     }
-    socket = io("http://75.52.93.72:5231");
+    socket = io("http://localhost:5231/game");
 
     sleepTimeouts = setInterval(() => {
         socket.emit("timeout", "yeetus deletus");
@@ -129,7 +129,7 @@ function connect() {
             tableRow.append(statusData);
             table.append(tableRow);
         });
-        var table = $(".player-list-body-rolled");
+        table = $(".player-list-body-rolled");
         table.empty();
         players.forEach((player) => {
             var tableRow = $("<tr></tr>", {});
@@ -177,6 +177,14 @@ function connect() {
             $("#bluff-button").removeClass("disabled");
         }
 
+
+        var raiseHTML = "";
+        game.callChain.forEach((call) => {
+            raiseHTML += `<li>${game.players[call.player]} called out ${call.numOfNums} ${call.num}'s</li>`;
+        });
+        $("#raise-history").clear();
+        $("#raise-history").html(raiseHTML);
+
         var table = $(".player-list-body");
         table.empty();
         game.players.forEach((player, i) => {
@@ -185,6 +193,9 @@ function connect() {
             var score = $("<td></td>");
             if (i == game.playerTurn) {
                 tableRow.addClass("table-success");
+            }
+            if (player.disconnect) {
+                tableRow.addClass("table-danger");
             }
             score.html(player.score);
             tableData.text(player.name);
@@ -195,8 +206,9 @@ function connect() {
 
         if (game.playerTurn == playerNum) {
             $("#raise-button").removeClass("disabled");
-            if ($("#bluff-button").hasClass("disabled"))
+            if (game.callChain.length != 0) {
                 $("#bluff-button").removeClass("disabled");
+            }
 
         } else {
             $("#raise-button").addClass("disabled");

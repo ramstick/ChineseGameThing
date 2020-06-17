@@ -78,7 +78,15 @@
                         <h2 class="player-name"></h2>
                         <hr>
                         <div class="row dice-roll-disp" style="padding:10px"></div>
-                        <div class="col-10 alert-info alert" id="last-raise-info"></div>
+
+
+                        <ul id="raise-history">
+
+                        </ul>
+
+                        <h2 class="col-10" id="last-raise-info alert alert-info">
+
+                        </h2>
                         <div class="row">
                             <div class="col-3"></div>
                             <button class="btn btn-primary col-2" id="raise-button" data-toggle="modal" onclick="if(!$('#raise-button').hasClass('disabled')){$('#raiseModal').modal('show');}">Raise!</button>
@@ -124,7 +132,7 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text" id="basic-addon1">Number of numbers: </span>
                                 </div>
-                                <input type="number" class="form-control" placeholder="number of numbers" aria-label="Username" aria-describedby="basic-addon1" id="number-of-numbers" min="1" oninput="this.value = Math.max(this.min,Math.min(this.max, parseInt(this.value)))">
+                                <input type="number" class="form-control" placeholder="number of numbers" aria-label="Username" aria-describedby="basic-addon1" id="number-of-numbers" min="1">
                             </div>
                             <div class="form-group">
                                 <label for="dice-number">Number</label>
