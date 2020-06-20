@@ -17,9 +17,9 @@
     </style>
 </head>
 
-<body onload="onload();">
+<body onload="main();">
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
-    <script src="test.js"></script>
+    <script src="script.js"></script>
 
     <div class="fluid-container">
 
@@ -48,7 +48,7 @@
                 </div>
                 <div class="row">
                     <div class="col-4"></div>
-                    <table class="col-4 table table-hover player-list-status" style="margin:10px;"></table>
+                    <table class="col-4 table table-hover player-list-status" style="margin:10px;" id="waitroom-player-list"></table>
                 </div>
                 <div class="row">
                     <div class="col-5"></div>
@@ -66,9 +66,9 @@
                             <div class="col-3"></div>
                             <button class="btn btn-primary col-2" id="roll-button" onclick="roll();">Roll!</button>
                         </div>
-                        <p class="text-center lead" id="rollroom-info">Waiting for all players to roll up!</p>
+                        <p class="text-center lead" id="rollroom-info">Waiting for all players to roll!</p>
                     </div>
-                    <table class="col-4 table table-hover player-list-rolled"></table>
+                    <table class="col-4 table table-hover player-list-rolled" id="rollroom-player-list"></table>
                 </div>
             </div>
 
@@ -80,21 +80,30 @@
                         <div class="row dice-roll-disp" style="padding:10px"></div>
 
 
-                        <ul id="raise-history">
+                        <table style="max-height: 500px;" class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <td>Raise History</td>
+                                </tr>
+                            </thead>
+                            <tbody id="raise-history">
+                                <tr>
+                                    <td>No raises!</td>
+                                </tr>
+                            </tbody>
+                        </table>
 
-                        </ul>
+                        <h4 class="col-10 alert alert-info" id="last-raise-info">
 
-                        <h2 class="col-10" id="last-raise-info alert alert-info">
-
-                        </h2>
+                        </h4>
                         <div class="row">
                             <div class="col-3"></div>
                             <button class="btn btn-primary col-2" id="raise-button" data-toggle="modal" onclick="if(!$('#raise-button').hasClass('disabled')){$('#raiseModal').modal('show');}">Raise!</button>
                             <div class="col-1"></div>
-                            <button class="btn btn-primary col-2" id="bluff-button" onclick="bluff();">Call Bluff!</button>
+                            <button class="btn btn-primary col-2" id="bluff-button" onclick="if(!$('#bluff-button').hasClass('disabled')){bluff();}">Call Bluff!</button>
                         </div>
                     </div>
-                    <table class="col-4 table table-hover player-list"></table>
+                    <table class="col-4 table table-hover player-list" id="bluffroom-player-list"></table>
                 </div>
             </div>
 
@@ -106,14 +115,16 @@
                         <div style="height:10%"></div>
                         <h3>Heres what everyone rolled!</h3>
                         <div style="height:10%"></div>
-                        <table id="all-roll-disp" class="table table-bordered">
+                        <table class="table table-bordered">
+                            <tbody id="all-roll-disp">
 
+                            </tbody>
                         </table>
                         <h3 class="alert alert-info" id="last-call"></h3>
                         <h3 id="win-lose"></h3>
-                        <button class="btn btn-primary" onclick="reset();enterWaitroom();">Return to waitroom</button>
+                        <button class="btn btn-primary" onclick="reset();main_scene_group.show('wait');">Return to waitroom</button>
                     </div>
-                    <table class="col-4 table table-hover player-list"></table>
+                    <table id="end-player-list" class="col-4 table table-hover player-list"></table>
                 </div>
             </div>
 
@@ -134,15 +145,17 @@
                                 </div>
                                 <input type="number" class="form-control" placeholder="number of numbers" aria-label="Username" aria-describedby="basic-addon1" id="number-of-numbers" min="1">
                             </div>
+                            <h6 id="num-of-nums-error" class="row alert alert-danger"></h6>
                             <div class="form-group">
                                 <label for="dice-number">Number</label>
                                 <select class="form-control" id="dice-number">
                             </select>
                             </div>
+                            <h6 id="num-error" class="row alert alert-danger"></h6>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Nevermind</button>
-                            <button type="button" class="btn btn-primary" onclick="raise();" data-dismiss="modal">Raise!</button>
+                            <button type="button" class="btn btn-primary" onclick="raise();">Raise!</button>
                         </div>
                     </div>
                 </div>

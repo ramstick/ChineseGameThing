@@ -16,7 +16,7 @@ var DICE = {
 }
 
 var html = fs.readFileSync('index.html', 'utf8');
-var js = fs.readFileSync('test.js', 'utf8');
+var js = fs.readFileSync('script.js', 'utf8');
 
 class Game {
     constructor() {
@@ -132,6 +132,8 @@ class Game {
         });
         this.playerTurn = 0;
         this.started = false;
+        this.callChain = [];
+        this.lastCall = null;
     }
 
     reorderPlayers(numAtTop) {
@@ -216,7 +218,6 @@ io.of("/game").on('connection', (socket) => {
         var player = new Player(socket);
 
         socket.on("name", (msg) => {
-
             if (game.players.some((player) => {
                     return player.name == msg;
                 })) {
@@ -228,16 +229,18 @@ io.of("/game").on('connection', (socket) => {
             socket.emit("room-join");
 
             player.name = msg;
-            console.log("player name: " + msg);
+            console.log(msg, " has joined");
             game.addUser(player);
 
-            game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
+            game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+            game.sendAllEvent("update");
 
 
             socket.on("ready", () => {
                 console.log(player.name + " readied up!");
                 player.readyUp();
-                game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
+                game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+                game.sendAllEvent("update");
 
                 if (game.players.length <= 1) {
                     return;
@@ -258,7 +261,8 @@ io.of("/game").on('connection', (socket) => {
 
                     game.start();
                     game.sendAllEvent("start");
-                    game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
+                    game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+                    game.sendAllEvent("update");
 
                     game.players.forEach((player, i) => {
                         player.socket.emit("player-num", i);
@@ -270,15 +274,21 @@ io.of("/game").on('connection', (socket) => {
                 if (game.started) {
                     if (!player.rolled) {
                         player.roll();
-                        game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
+
+                        game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+                        game.sendAllEvent("update");
+
                         socket.emit("roll", player.rolledValues);
+                        socket.emit("update");
 
                         var a = game.players.some((player) => player.rolled == false);
                         if (!a) {
                             console.log("+++++++++++++++++++ ALL PLAYERS HAVE ROLLED +++++++++++++++++++++");
                             console.log(game.getJsonHappyPlayerList());
-                            game.sendAllEventMessage("bluff-game-state", JSON.stringify(game.toJsonHappy()));
+                            game.sendAllEventMessage("game-board-state", game.toJsonHappy());
+                            game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
                             game.sendAllEvent("enter-bluff");
+                            game.sendAllEvent("update");
                         }
                     } else {
                         socket.emit("slight-error", "You've rolled already!");
@@ -294,9 +304,11 @@ io.of("/game").on('connection', (socket) => {
 
             socket.on("call", (num, numOfNums) => {
                 if (socket.id == game.players[game.playerTurn].socket.id) {
-                    console.log(game.playerTurn, " raised it to ", num, " ", numOfNums, "'s");
+                    console.log(game.playerTurn, " raised it to ", numOfNums, " ", num, "'s");
                     game.call(num, numOfNums);
-                    game.sendAllEventMessage("bluff-game-state", JSON.stringify(game.toJsonHappy()));
+                    game.sendAllEventMessage("game-board-state", game.toJsonHappy());
+                    game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+                    game.sendAllEvent("update");
                 } else {
                     socket.emit("slight-error", "It's not your turn!");
                 }
@@ -347,30 +359,45 @@ io.of("/game").on('connection', (socket) => {
                 gameState.didWin = count < lastCall.numOfNums;
                 gameState.playerInvolved = game.playerTurn;
 
-                game.sendAllEventMessage("end-game-state", gameState);
+                game.sendAllEvent("game-end");
+                game.sendAllEventMessage("game-board-state", gameState);
+                game.sendAllEvent("update");
                 console.log(game.toJsonHappy());
+
                 game.reset();
                 game.reorderPlayers(game.playerTurn);
-                game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
+
+                game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+                game.sendAllEvent("update");
             });
 
             socket.on("disconnect", () => {
                 console.log(player.name + " has disconnected!");
 
-                game.sendAllEventMessage("player-list", JSON.stringify(game.getJsonHappyPlayerList()));
-
                 if (game.started) {
-                    if (game.players.length <= 1) {
+                    player.disconnect = true;
+                    var num_online = 0;
+                    game.players.forEach((player) => {
+                        if (!player.disconnect) {
+                            num_online++;
+                        }
+                    });
+                    if (num_online <= 1) {
                         game.sendAllEvent("heavy-error", "All opponents have left!");
                         game.clearPlayers();
+                        console.log("all players have left, cleaning up the game");
                         game = new Game();
+                        return;
+                    } else {
+                        game.playerTurn %= game.players.length;
+                        game.checkDisconnect();
                     }
-                    player.disconnect = true;
-                    game.playerTurn %= game.players.length;
-                    checkDisconnect();
                 } else {
                     game.removeSocket(socket.id);
                 }
+
+                game.sendAllEventMessage("player-list", game.getJsonHappyPlayerList());
+                game.sendAllEvent("update");
             });
         });
     } else {
@@ -381,4 +408,4 @@ io.of("/game").on('connection', (socket) => {
 
 app.get('/', (req, res) => res.send(html));
 
-app.get('/test.js', (req, res) => res.send(js));
+app.get('/script.js', (req, res) => res.send(js));
