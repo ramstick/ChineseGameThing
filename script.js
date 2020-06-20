@@ -1,7 +1,7 @@
 /* jshint -W104 */
 /* jshint esversion: 9 */
 
-const gameURL = "http://localhost:5231/game";
+const gameURL = "http://75.52.93.72:5231/game";
 
 var socket;
 
